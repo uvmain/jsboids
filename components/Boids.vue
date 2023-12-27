@@ -1,5 +1,16 @@
 <template>
   <div>
+    <div>
+      <label for="velocityInput">Global Velocity: {{ globalVelocity }}</label>
+      <input
+        type="range"
+        min="0.1"
+        max="20"
+        id="velocityInput"
+        v-model="globalVelocity"
+        @input="updateVelocity"
+      />
+    </div>
     <canvas ref="boidsCanvas" width="800" height="600"></canvas>
   </div>
 </template>
@@ -11,6 +22,7 @@ export default {
       canvas: null,
       ctx: null,
       boids: [],
+      globalVelocity: 5
     };
   },
   mounted() {
@@ -34,8 +46,8 @@ export default {
   methods: {
     updateBoid(boid) {
       // Update position based on velocity
-      boid.x += boid.dx;
-      boid.y += boid.dy;
+      boid.x += boid.dx * this.globalVelocity;
+      boid.y += boid.dy * this.globalVelocity;
 
       // Bounce off walls
       if (boid.x < 0 || boid.x > this.canvas.width) {
@@ -55,19 +67,23 @@ export default {
     },
     animate() {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
       // Update and draw each boid
       for (const boid of this.boids) {
         this.updateBoid(boid);
         this.drawBoid(boid);
       }
-
       requestAnimationFrame(this.animate);
+    },
+    updateVelocity() {
+      // Ensure that the input is a valid number
+      const parsedValue = parseFloat(this.globalVelocity);
+      if (!isNaN(parsedValue)) {
+        this.globalVelocity = parsedValue;
+      }
+      else {
+        this.globalVelocity = 1.0;
+      }
     },
   },
 };
 </script>
-
-<style>
-/* Add your component styles here */
-</style>
