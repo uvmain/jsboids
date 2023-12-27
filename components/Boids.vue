@@ -24,7 +24,8 @@ export default {
       const y = Math.random() * this.canvas.height;
       const dx = Math.random() * 2 - 1;
       const dy = Math.random() * 2 - 1;
-      this.boids.push({ x, y, dx, dy });
+      const c = `#${Math.floor(Math.random()*16777215).toString(16)}`
+      this.boids.push({ x, y, dx, dy, c });
     }
 
     // Start the animation loop
@@ -48,7 +49,7 @@ export default {
       // Draw boid as a simple circle
       this.ctx.beginPath();
       this.ctx.arc(boid.x, boid.y, 5, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#000';
+      this.ctx.fillStyle = boid.c;
       this.ctx.fill();
       this.ctx.closePath();
     },
