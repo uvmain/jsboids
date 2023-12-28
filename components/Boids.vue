@@ -12,6 +12,7 @@ const globalAlignmentDistance = ref(40.0);
 const globalAlignmentFactor = ref(0.7);
 const trails = ref(true);
 const boidSize = ref(30);
+const jitterAmount = ref(20);
 
 type Boid = { x: number, y: number, dx: number, dy: number, c: string };
 
@@ -57,7 +58,7 @@ function addBoid() {
   const y = Math.random() * canvas.height;
   const dx = Math.random() * 2 - 1;
   const dy = Math.random() * 2 - 1;
-  const c = getRandomColor()
+  const c = getRandomColor();
   boids.push({ x, y, dx, dy, c });
 }
 
@@ -164,6 +165,17 @@ function updateBoid(boid: Boid) {
   applySeparation(boid);
   applyAlignment(boid);
   applyCohesion(boid);
+  applyJitter(boid);
+}
+
+function applyJitter(boid: Boid) {
+  if (Math.random() > 0.5)
+    return
+  let angleChange = (jitterAmount.value / 100) * (Math.random() * 2 - 1);
+  const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
+  const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
+  boid.dx = speed * Math.cos(newAngle);
+  boid.dy = speed * Math.sin(newAngle);
 }
 
 function applySeparation(boid: Boid) {
@@ -376,6 +388,18 @@ function animate() {
           max="50"
           v-model="globalGridPartitions"
           @input="updateGrid"
+        />
+      </div>
+      <div>
+        <div>
+          Jitter Amount: {{ jitterAmount }}
+        </div>
+        <input
+          type="range"
+          min="0"
+          step="10"
+          max="100"
+          v-model="jitterAmount"
         />
       </div>
       <div>
