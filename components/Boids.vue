@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
-const numberOfBoids = ref(200)
+const numberOfBoids = ref(1000)
+const globalGridSize = ref(40);
 const globalVelocity = ref(5.0)
 const globalSeparation = ref(20.0)
 const globalCohesion = ref(30.0)
@@ -11,6 +12,7 @@ type Boid = { x: number, y: number, dx: number, dy: number, c: string }
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
 let boids: Boid[] = []
+let grid: any[] = [];
 
 onMounted(() => {
   // Initialize canvas and context
@@ -33,7 +35,7 @@ onMounted(() => {
   window.addEventListener('resize', handleResize);
 })
 
-onMounted(() => {
+onUnmounted(() => {
   // Remove the resize event listener when the component is destroyed
   window.removeEventListener('resize', handleResize);
 })
@@ -54,6 +56,58 @@ function addBoid() {
   const dy = Math.random() * 2 - 1;
   const c = getRandomColor()
   boids.push({ x, y, dx, dy, c });
+}
+
+function clearGrid() {
+  const cols = Math.ceil(canvas.width / globalGridSize.value);
+  const rows = Math.ceil(canvas.height / globalGridSize.value);
+
+  grid = []
+
+  for (let x = 0; x < cols; x++) {
+    grid[x] = [];
+    for (let y = 0; y < rows; y++) {
+      grid[x][y] = [];
+    }
+  }
+}
+
+function addToGrid(boid: Boid) {
+  const gridX = Math.max(0, Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridSize.value));
+  const gridY = Math.max(0, Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridSize.value)) ;
+
+  if (gridX >= 0 && gridX < grid.length && gridY >= 0 && gridY < grid[0].length) {
+    try {
+      grid[gridX][gridY].push(boid);
+    } catch (err) {
+      console.log(`Error adding to grid: ${gridX} ${gridY}`);
+      console.error(err);
+    }
+  } else {
+    console.log(`Invalid indices: ${gridX}, ${gridY}`);
+  }
+}
+
+function getNeighbors(boid: Boid): Boid[] {
+  const gridX = Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridSize.value);
+  const gridY = Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridSize.value);
+  const neighbors = [];
+
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) {
+      const neighborX = gridX + i;
+      const neighborY = gridY + j;
+      if (
+        neighborX >= 0 &&
+        neighborX < grid.length &&
+        neighborY >= 0 &&
+        neighborY < grid[0].length
+      ) {
+        neighbors.push(...grid[neighborX][neighborY]);
+      }
+    }
+  }
+  return neighbors;
 }
 
 function removeBoid() {
@@ -86,6 +140,7 @@ function handleResize() {
     boid.x = Math.min(boid.x, canvas.width);
     boid.y = Math.min(boid.y, canvas.height);
   }
+  updateGrid()
 }
 
 function updateBoid(boid: Boid) {
@@ -109,7 +164,8 @@ function updateBoid(boid: Boid) {
 }
 
 function applySeparation(boid: Boid) {
-  for (const otherBoid of boids) {
+  const neighbors = getNeighbors(boid);
+  for (const otherBoid of neighbors) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
     if (otherBoid !== boid && distance < globalSeparation.value) {
       // Move away from nearby boids
@@ -124,9 +180,9 @@ function applyAlignment(boid: Boid) {
   let avgDy = 0;
   let count = 0;
 
-  for (const otherBoid of boids) {
+  const neighbors = getNeighbors(boid);
+  for (const otherBoid of neighbors) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
-
     if (otherBoid !== boid && distance < globalAlignment.value) {
       // Align with nearby boids
       avgDx += otherBoid.dx;
@@ -138,7 +194,6 @@ function applyAlignment(boid: Boid) {
   if (count > 0) {
     avgDx /= count;
     avgDy /= count;
-
     // Apply alignment
     boid.dx += (avgDx - boid.dx) * 0.1;
     boid.dy += (avgDy - boid.dy) * 0.1;
@@ -149,7 +204,8 @@ function applyCohesion(boid: Boid) {
   let avgX = 0;
   let avgY = 0;
   let count = 0;
-  for (const otherBoid of boids) {
+  const neighbors = getNeighbors(boid);
+  for (const otherBoid of neighbors) {  
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
     if (otherBoid !== boid && distance < globalCohesion.value) {
       // Cohere towards the center of nearby boids
@@ -162,7 +218,6 @@ function applyCohesion(boid: Boid) {
   if (count > 0) {
     avgX /= count;
     avgY /= count;
-
     // Apply cohesion
     boid.dx += (avgX - boid.x) * 0.005;
     boid.dy += (avgY - boid.y) * 0.005;
@@ -202,9 +257,17 @@ function drawBoid(boid: Boid) {
   ctx.restore();
 }
 
+function updateGrid() {
+  clearGrid()
+  for (const boid of boids) {
+    addToGrid(boid);
+  }
+}
+
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Update and draw each boid
+  updateGrid()
   for (const boid of boids) {
     updateBoid(boid);
     drawBoid(boid);
@@ -224,10 +287,10 @@ function animate() {
         <input
           type="range"
           min="0"
-          max="500"
+          max="5000"
           v-model="numberOfBoids"
           step="1"
-          @input="updateNumberOfBoids" 
+          @input="updateNumberOfBoids"
         />
       </div>
       <div>
@@ -272,6 +335,19 @@ function animate() {
           min="0.1"
           max="100"
           v-model="globalAlignment"
+        />
+      </div>
+      <div>
+        <div>
+          GridSize: {{ globalGridSize }}
+        </div>
+        <input
+          type="range"
+          min="10"
+          step="10"
+          max="100"
+          v-model="globalGridSize"
+          @input="updateGrid"
         />
       </div>
     </div>
