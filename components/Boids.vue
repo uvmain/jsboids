@@ -1,22 +1,21 @@
 <script setup lang="ts">
 
-const numberOfBoids = ref(50)
+const numberOfBoids = ref(200)
 const globalVelocity = ref(5.0)
 const globalSeparation = ref(20.0)
 const globalCohesion = ref(30.0)
-const globalAlignment = ref(50.0)
-
-let canvas: HTMLCanvasElement
-let ctx: any = null
-let boids: any[] = []
+const globalAlignment = ref(70.0)
 
 type Boid = { x: number, y: number, dx: number, dy: number, c: string }
+
+let canvas: HTMLCanvasElement
+let ctx: CanvasRenderingContext2D
+let boids: Boid[] = []
 
 onMounted(() => {
   // Initialize canvas and context
   canvas = document.getElementById('boidsCanvas') as HTMLCanvasElement;
-  console.log(`canvas: ${canvas}`)
-  ctx = canvas.getContext('2d');
+  ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
   // Set canvas size to match the document's client width
   canvas.width = document.documentElement.clientWidth - 20;
@@ -39,12 +38,21 @@ onMounted(() => {
   window.removeEventListener('resize', handleResize);
 })
 
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
 function addBoid() {
   const x = Math.random() * canvas.width;
   const y = Math.random() * canvas.height;
   const dx = Math.random() * 2 - 1;
   const dy = Math.random() * 2 - 1;
-  const c = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+  const c = getRandomColor()
   boids.push({ x, y, dx, dy, c });
 }
 
@@ -216,7 +224,7 @@ function animate() {
         <input
           type="range"
           min="0"
-          max="100"
+          max="500"
           v-model="numberOfBoids"
           step="1"
           @input="updateNumberOfBoids" 
