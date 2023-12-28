@@ -1,11 +1,12 @@
 <script setup lang="ts">
 
 const numberOfBoids = ref(1000)
-const globalGridSize = ref(40);
+const globalGridPartitions = ref(10);
 const globalVelocity = ref(5.0)
 const globalSeparation = ref(20.0)
 const globalCohesion = ref(30.0)
-const globalAlignment = ref(70.0)
+const globalAlignmentDistance = ref(70.0)
+const globalAlignmentFactor = ref(0.7)
 
 type Boid = { x: number, y: number, dx: number, dy: number, c: string }
 
@@ -59,8 +60,8 @@ function addBoid() {
 }
 
 function clearGrid() {
-  const cols = Math.ceil(canvas.width / globalGridSize.value);
-  const rows = Math.ceil(canvas.height / globalGridSize.value);
+  const cols = Math.ceil(canvas.width / globalGridPartitions.value);
+  const rows = Math.ceil(canvas.height / globalGridPartitions.value);
 
   grid = []
 
@@ -73,8 +74,8 @@ function clearGrid() {
 }
 
 function addToGrid(boid: Boid) {
-  const gridX = Math.max(0, Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridSize.value));
-  const gridY = Math.max(0, Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridSize.value)) ;
+  const gridX = Math.max(0, Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridPartitions.value));
+  const gridY = Math.max(0, Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridPartitions.value)) ;
 
   if (gridX >= 0 && gridX < grid.length && gridY >= 0 && gridY < grid[0].length) {
     try {
@@ -89,8 +90,8 @@ function addToGrid(boid: Boid) {
 }
 
 function getNeighbors(boid: Boid): Boid[] {
-  const gridX = Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridSize.value);
-  const gridY = Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridSize.value);
+  const gridX = Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridPartitions.value);
+  const gridY = Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridPartitions.value);
   const neighbors = [];
 
   for (let i = -1; i <= 1; i++) {
@@ -183,7 +184,7 @@ function applyAlignment(boid: Boid) {
   const neighbors = getNeighbors(boid);
   for (const otherBoid of neighbors) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
-    if (otherBoid !== boid && distance < globalAlignment.value) {
+    if (otherBoid !== boid && distance < globalAlignmentDistance.value) {
       // Align with nearby boids
       avgDx += otherBoid.dx;
       avgDy += otherBoid.dy;
@@ -195,8 +196,8 @@ function applyAlignment(boid: Boid) {
     avgDx /= count;
     avgDy /= count;
     // Apply alignment
-    boid.dx += (avgDx - boid.dx) * 0.1;
-    boid.dy += (avgDy - boid.dy) * 0.1;
+    boid.dx += (avgDx - boid.dx) * globalAlignmentFactor.value;
+    boid.dy += (avgDy - boid.dy) * globalAlignmentFactor.value;
   }
 }
 
@@ -328,25 +329,37 @@ function animate() {
       </div>
       <div>
         <div>
-          Alignment: {{ globalAlignment }}
+          Alignment Distance: {{ globalAlignmentDistance }}
         </div>
         <input
           type="range"
           min="0.1"
           max="100"
-          v-model="globalAlignment"
+          v-model="globalAlignmentDistance"
         />
       </div>
       <div>
         <div>
-          GridSize: {{ globalGridSize }}
+          Alignment Factor: {{ globalAlignmentFactor }}
+        </div>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.1"
+          v-model="globalAlignmentFactor"
+        />
+      </div>
+      <div>
+        <div>
+          Grid Partition Count: {{ globalGridPartitions }}
         </div>
         <input
           type="range"
           min="10"
           step="10"
-          max="100"
-          v-model="globalGridSize"
+          max="50"
+          v-model="globalGridPartitions"
           @input="updateGrid"
         />
       </div>
