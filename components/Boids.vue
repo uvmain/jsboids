@@ -1,29 +1,32 @@
 <script setup lang="ts">
 
-const numberOfBoids = ref(1000)
+import pallete from '../pallet'
+
+const numberOfBoids = ref(2000);
 const globalGridPartitions = ref(10);
-const globalVelocity = ref(5.0)
-const globalSeparation = ref(20.0)
-const globalCohesion = ref(30.0)
-const globalAlignmentDistance = ref(70.0)
-const globalAlignmentFactor = ref(0.7)
+const globalVelocity = ref(5.0);
+const globalSeparation = ref(100.0);
+const globalCohesionDistance = ref(30.0);
+const globalCohesionFactor = ref(0.7);
+const globalAlignmentDistance = ref(40.0);
+const globalAlignmentFactor = ref(0.7);
+const trails = ref(true);
+const boidSize = ref(30);
 
-type Boid = { x: number, y: number, dx: number, dy: number, c: string }
+type Boid = { x: number, y: number, dx: number, dy: number, c: string };
 
-let canvas: HTMLCanvasElement
-let ctx: CanvasRenderingContext2D
-let boids: Boid[] = []
+let canvas: HTMLCanvasElement;
+let ctx: CanvasRenderingContext2D;
+let boids: Boid[] = [];
 let grid: any[] = [];
 
 onMounted(() => {
   // Initialize canvas and context
   canvas = document.getElementById('boidsCanvas') as HTMLCanvasElement;
-  ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-
-  // Set canvas size to match the document's client width
   canvas.width = document.documentElement.clientWidth - 20;
   canvas.height = document.documentElement.clientHeight - 20;
-
+  ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  
   // Create a group of boids
   for (let i = 0; i < numberOfBoids.value; i++) {
     addBoid()
@@ -42,12 +45,11 @@ onUnmounted(() => {
 })
 
 function getRandomColor() {
-  var letters = '0123456789ABCDEF';
-  var color = '#';
-  for (var i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
+  let randomIndex = 0
+  while (randomIndex === 0) {
+    randomIndex = Math.floor(Math.random() * pallete.length);
   }
-  return color;
+  return `#${pallete[randomIndex]}`;
 }
 
 function addBoid() {
@@ -208,7 +210,7 @@ function applyCohesion(boid: Boid) {
   const neighbors = getNeighbors(boid);
   for (const otherBoid of neighbors) {  
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
-    if (otherBoid !== boid && distance < globalCohesion.value) {
+    if (otherBoid !== boid && distance < globalCohesionDistance.value) {
       // Cohere towards the center of nearby boids
       avgX += otherBoid.x;
       avgY += otherBoid.y;
@@ -220,8 +222,8 @@ function applyCohesion(boid: Boid) {
     avgX /= count;
     avgY /= count;
     // Apply cohesion
-    boid.dx += (avgX - boid.x) * 0.005;
-    boid.dy += (avgY - boid.y) * 0.005;
+    boid.dx += (avgX - boid.x) * (0.01 * globalCohesionFactor.value);
+    boid.dy += (avgY - boid.y) * (0.01 * globalCohesionFactor.value);
   }
 }
 
@@ -237,7 +239,7 @@ function normaliseVelocity(boid: Boid) {
 }
 
 function drawBoid(boid: Boid) {
-  const size = 10; // Adjust the size of the triangle as needed
+  const size = boidSize.value;
 
   // Calculate the angle of the boid's velocity
   const angle = Math.atan2(boid.dy, boid.dx);
@@ -266,7 +268,8 @@ function updateGrid() {
 }
 
 function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!trails.value)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Update and draw each boid
   updateGrid()
   for (const boid of boids) {
@@ -318,13 +321,25 @@ function animate() {
       </div>
       <div>
         <div>
-          Cohesion: {{ globalCohesion }}
+          Cohesion Distance: {{ globalCohesionDistance }}
         </div>
         <input
           type="range"
           min="0.1"
           max="100"
-          v-model="globalCohesion"
+          v-model="globalCohesionDistance"
+        />
+      </div>
+      <div>
+        <div>
+          Cohesion Factor: {{ globalCohesionFactor }}
+        </div>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.1"
+          v-model="globalCohesionFactor"
         />
       </div>
       <div>
@@ -361,6 +376,26 @@ function animate() {
           max="50"
           v-model="globalGridPartitions"
           @input="updateGrid"
+        />
+      </div>
+      <div>
+        <div>
+          Trails Enabled
+        </div>
+        <input
+          type="checkbox" v-model="trails"
+        />
+      </div>
+      <div>
+        <div>
+          Boid Size: {{ boidSize }}
+        </div>
+        <input
+          type="range"
+          min="1.0"
+          max="100"
+          step="1"
+          v-model="boidSize"
         />
       </div>
     </div>
