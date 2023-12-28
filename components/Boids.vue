@@ -13,6 +13,7 @@ const globalAlignmentFactor = ref(0.7);
 const trails = ref(true);
 const boidSize = ref(30);
 const jitterAmount = ref(20);
+const mouseAttractionFactor = ref(0.1);
 
 type Boid = { x: number, y: number, dx: number, dy: number, c: string };
 
@@ -36,14 +37,26 @@ onMounted(() => {
   // Start the animation loop
   animate();
 
-  // Listen for window resize events and update canvas size accordingly
   window.addEventListener('resize', handleResize);
+  canvas.addEventListener('mousemove', handleMouseMove);
 })
 
 onUnmounted(() => {
-  // Remove the resize event listener when the component is destroyed
+  canvas.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('resize', handleResize);
 })
+
+function handleMouseMove(event: MouseEvent) {
+  const mouseX = event.clientX;
+  const mouseY = event.clientY;
+  for (const boid of boids) {
+    const angleToMouse = Math.atan2(mouseY - boid.y, mouseX - boid.x);
+    boid.dx += Math.cos(angleToMouse) * mouseAttractionFactor.value;
+    boid.dy += Math.sin(angleToMouse) * mouseAttractionFactor.value;
+    // Normalize the velocity
+    normaliseVelocity(boid);
+  }
+}
 
 function getRandomColor() {
   let randomIndex = 0
@@ -63,11 +76,9 @@ function addBoid() {
 }
 
 function clearGrid() {
+  grid = [];
   const cols = Math.ceil(canvas.width / globalGridPartitions.value);
   const rows = Math.ceil(canvas.height / globalGridPartitions.value);
-
-  grid = []
-
   for (let x = 0; x < cols; x++) {
     grid[x] = [];
     for (let y = 0; y < rows; y++) {
@@ -78,7 +89,7 @@ function clearGrid() {
 
 function addToGrid(boid: Boid) {
   const gridX = Math.max(0, Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridPartitions.value));
-  const gridY = Math.max(0, Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridPartitions.value)) ;
+  const gridY = Math.max(0, Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridPartitions.value));
 
   if (gridX >= 0 && gridX < grid.length && gridY >= 0 && gridY < grid[0].length) {
     try {
@@ -420,6 +431,18 @@ function animate() {
           max="100"
           step="1"
           v-model="boidSize"
+        />
+      </div>
+      <div>
+        <div>
+          Mouse Attraction Factor: {{ mouseAttractionFactor }}
+        </div>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.1"
+          v-model="mouseAttractionFactor"
         />
       </div>
     </div>
