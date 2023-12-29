@@ -4,18 +4,24 @@ import pallete from '../pallet'
 
 const numberOfBoids = ref(1000);
 const globalGridPartitions = ref(10);
-const globalVelocity = ref(5.0);
+const globalVelocity = ref(3.4);
 const globalSeparation = ref(100.0);
 const globalCohesionDistance = ref(30.0);
 const globalCohesionFactor = ref(0.7);
 const globalAlignmentDistance = ref(40.0);
 const globalAlignmentFactor = ref(0.7);
 const trails = ref(true);
-const boidSize = ref(30);
+const boidSize = ref(8);
 const jitterAmount = ref(20);
 const mouseAttractionFactor = ref(0.1);
+const colourChangeFrequency = ref(0.00);
 
-type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: string };
+enum BoidType {
+  BG,
+  STARS,
+};
+
+type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: BoidType };
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -58,16 +64,18 @@ function handleMouseMove(event: MouseEvent) {
   }
 }
 
-function getRandomColor() {
-  let index = 0
-  const type = Math.random() > 0.7 ? 1 : 0
-  if (type == 0) {
-    index = Math.floor(Math.random() * pallete.bg.length)
-    return { c: pallete.bg[index], t: 'bg'};
+function getRandomType(): BoidType {
+  return Math.random() > 0.85 ? BoidType.STARS : BoidType.BG;
+}
+
+function getRandomColor(type: BoidType) {
+  if (type === BoidType.BG) {
+    const index = Math.floor(Math.random() * pallete.bg.length)
+    return pallete.bg[index];
   }
   else {
-    index = Math.floor(Math.random() * pallete.stars.length)
-    return { c: pallete.stars[index], t: 'stars'};
+    const index = Math.floor(Math.random() * pallete.stars.length)
+    return pallete.stars[index];
   }
 }
 
@@ -76,7 +84,8 @@ function addBoid() {
   const y = Math.random() * canvas.height;
   const dx = Math.random() * 2 - 1;
   const dy = Math.random() * 2 - 1;
-  const { c, t } = getRandomColor();
+  const t = getRandomType()
+  const c = getRandomColor(t);
   boids.push({ x, y, dx, dy, c, t });
 }
 
@@ -183,10 +192,13 @@ function updateBoid(boid: Boid) {
   applyCohesion(boid);
   applyJitter(boid);
   applySpin(boid);
+
+  if (colourChangeFrequency.value > 0 && Math.random() < colourChangeFrequency.value)
+    boid.c = getRandomColor(boid.t);
 }
 
 function applyJitter(boid: Boid) {
-  if (boid.t === 'stars' || Math.random() > 0.5)
+  if (boid.t === BoidType.STARS || Math.random() > 0.5)
     return
   let angleChange = (jitterAmount.value / 100) * (Math.random() * 2 - 1);
   const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
@@ -196,7 +208,7 @@ function applyJitter(boid: Boid) {
 }
 
 function applySpin(boid: Boid) {
-  if (boid.t === 'bg')
+  if (boid.t === BoidType.BG)
     return
   let angleChange = (jitterAmount.value / 200) * Math.abs(Math.random() * 2 - 1);
   const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
@@ -247,22 +259,37 @@ function applyCohesion(boid: Boid) {
   let avgY = 0;
   let count = 0;
   const neighbors = getNeighbors(boid);
-  for (const otherBoid of neighbors) {  
+  
+  for (const otherBoid of neighbors) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
+
     if (otherBoid !== boid && distance < globalCohesionDistance.value) {
-      // Cohere towards the center of nearby boids
-      avgX += otherBoid.x;
-      avgY += otherBoid.y;
-      count++;
+      // Cohere towards the center of nearby boids, with preference based on boid type
+      if (boid.t === BoidType.BG && otherBoid.t === BoidType.BG) {
+        avgX += otherBoid.x;
+        avgY += otherBoid.y;
+        count++;
+      } else if (boid.t === BoidType.STARS && otherBoid.t === BoidType.STARS) {
+        avgX += otherBoid.x;
+        avgY += otherBoid.y;
+        count++;
+      }
     }
   }
 
   if (count > 0) {
     avgX /= count;
     avgY /= count;
-    // Apply cohesion
-    boid.dx += (avgX - boid.x) * (0.01 * globalCohesionFactor.value);
-    boid.dy += (avgY - boid.y) * (0.01 * globalCohesionFactor.value);
+
+    // Apply cohesion with different factors based on boid type
+    if (boid.t === BoidType.BG) {
+      boid.dx += (avgX - boid.x) * (0.01 * globalCohesionFactor.value);
+      boid.dy += (avgY - boid.y) * (0.01 * globalCohesionFactor.value);
+    }
+    else {
+      boid.dx += (avgX - boid.x) * (0.02 * globalCohesionFactor.value);
+      boid.dy += (avgY - boid.y) * (0.02 * globalCohesionFactor.value);
+    }
   }
 }
 
@@ -410,8 +437,8 @@ function animate() {
         </div>
         <input
           type="range"
-          min="10"
-          step="10"
+          min="2"
+          step="1"
           max="50"
           v-model="globalGridPartitions"
           @input="updateGrid"
@@ -459,6 +486,18 @@ function animate() {
           max="1.0"
           step="0.1"
           v-model="mouseAttractionFactor"
+        />
+      </div>
+      <div>
+        <div>
+          Colour Change Freq: {{ colourChangeFrequency }}
+        </div>
+        <input
+          type="range"
+          min="0.0"
+          max="1.0"
+          step="0.01"
+          v-model="colourChangeFrequency"
         />
       </div>
     </div>
