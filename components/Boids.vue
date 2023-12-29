@@ -2,17 +2,18 @@
 
 import pallete from '../pallet'
 
-const numberOfBoids = ref(1000);
-const globalGridPartitions = ref(10);
-const globalVelocity = ref(3.4);
+const numberOfBoids = ref(2000);
+const globalVelocity = ref(3.0);
 const globalSeparation = ref(100.0);
 const globalCohesionDistance = ref(30.0);
 const globalCohesionFactor = ref(0.7);
 const globalAlignmentDistance = ref(40.0);
 const globalAlignmentFactor = ref(0.7);
-const trails = ref(true);
-const boidSize = ref(8);
+const globalGridPartitions = ref(10);
 const jitterAmount = ref(20);
+const spinAmount = ref(20);
+const trailsEnabled = ref(true);
+const boidSize = ref(8);
 const mouseAttractionFactor = ref(0.1);
 const colourChangeFrequency = ref(0.00);
 
@@ -48,8 +49,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  canvas.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('resize', handleResize);
+  canvas.removeEventListener('mousemove', handleMouseMove);
 })
 
 function handleMouseMove(event: MouseEvent) {
@@ -86,7 +87,8 @@ function addBoid() {
   const dy = Math.random() * 2 - 1;
   const t = getRandomType()
   const c = getRandomColor(t);
-  boids.push({ x, y, dx, dy, c, t });
+  const newBoid = { x, y, dx, dy, c, t }
+  boids.push(newBoid);
 }
 
 function clearGrid() {
@@ -117,26 +119,26 @@ function addToGrid(boid: Boid) {
   }
 }
 
-function getNeighbors(boid: Boid): Boid[] {
+function getNeighbours(boid: Boid): Boid[] {
   const gridX = Math.floor(Math.min(boid.x, canvas.width - 1) / globalGridPartitions.value);
   const gridY = Math.floor(Math.min(boid.y, canvas.height - 1) / globalGridPartitions.value);
-  const neighbors = [];
+  const neighbours = [];
 
   for (let i = -1; i <= 1; i++) {
     for (let j = -1; j <= 1; j++) {
-      const neighborX = gridX + i;
-      const neighborY = gridY + j;
+      const neighbourX = gridX + i;
+      const neighbourY = gridY + j;
       if (
-        neighborX >= 0 &&
-        neighborX < grid.length &&
-        neighborY >= 0 &&
-        neighborY < grid[0].length
+        neighbourX >= 0 &&
+        neighbourX < grid.length &&
+        neighbourY >= 0 &&
+        neighbourY < grid[0].length
       ) {
-        neighbors.push(...grid[neighborX][neighborY]);
+        neighbours.push(...grid[neighbourX][neighbourY]);
       }
     }
   }
-  return neighbors;
+  return neighbours;
 }
 
 function removeBoid() {
@@ -208,18 +210,18 @@ function applyJitter(boid: Boid) {
 }
 
 function applySpin(boid: Boid) {
-  if (boid.t === BoidType.BG)
-    return
-  let angleChange = (jitterAmount.value / 200) * Math.abs(Math.random() * 2 - 1);
-  const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
-  const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
-  boid.dx = speed * Math.cos(newAngle);
-  boid.dy = speed * Math.sin(newAngle);
+  if (boid.t === BoidType.STARS) {
+    let angleChange = (spinAmount.value / 200) * Math.abs(Math.random() * 2 - 1);
+    const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
+    const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
+    boid.dx = speed * Math.cos(newAngle);
+    boid.dy = speed * Math.sin(newAngle);
+  }
 }
 
 function applySeparation(boid: Boid) {
-  const neighbors = getNeighbors(boid);
-  for (const otherBoid of neighbors) {
+  const neighbours = getNeighbours(boid);
+  for (const otherBoid of neighbours) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
     if (otherBoid !== boid && distance < globalSeparation.value) {
       // Move away from nearby boids
@@ -234,10 +236,11 @@ function applyAlignment(boid: Boid) {
   let avgDy = 0;
   let count = 0;
 
-  const neighbors = getNeighbors(boid);
-  for (const otherBoid of neighbors) {
+  const neighbours = getNeighbours(boid);
+  const alignmentDistance = boid.x === BoidType.BG ? globalAlignmentDistance.value : globalAlignmentDistance.value * 2
+  for (const otherBoid of neighbours) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
-    if (otherBoid !== boid && distance < globalAlignmentDistance.value) {
+    if (otherBoid !== boid && distance < alignmentDistance) {
       // Align with nearby boids
       avgDx += otherBoid.dx;
       avgDy += otherBoid.dy;
@@ -258,12 +261,13 @@ function applyCohesion(boid: Boid) {
   let avgX = 0;
   let avgY = 0;
   let count = 0;
-  const neighbors = getNeighbors(boid);
+  const neighbours = getNeighbours(boid);
+  const cohesionDistance = boid.x === BoidType.BG ? globalCohesionDistance.value : globalCohesionDistance.value * 2
   
-  for (const otherBoid of neighbors) {
+  for (const otherBoid of neighbours) {
     const distance = Math.hypot(boid.x - otherBoid.x, boid.y - otherBoid.y);
 
-    if (otherBoid !== boid && distance < globalCohesionDistance.value) {
+    if (otherBoid !== boid && distance < cohesionDistance) {
       // Cohere towards the center of nearby boids, with preference based on boid type
       if (boid.t === BoidType.BG && otherBoid.t === BoidType.BG) {
         avgX += otherBoid.x;
@@ -334,7 +338,7 @@ function updateGrid() {
 }
 
 function animate() {
-  if (!trails.value)
+  if (!trailsEnabled.value)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Update and draw each boid
   updateGrid()
@@ -348,7 +352,7 @@ function animate() {
 
 <template>
   <div>
-    <canvas id="boidsCanvas"></canvas>
+    <canvas id="boidsCanvas" class="canvas"/>
     <div class="controls">
       <InputSlider
         label="Boids"
@@ -412,12 +416,19 @@ function animate() {
         :max="100"
         :step="10"
       />
+      <InputSlider
+        label="Spin Amount"
+        v-model="spinAmount"
+        :min="0"
+        :max="100"
+        :step="5"
+      />
       <div>
         <div>
           Trails Enabled
         </div>
         <input
-          type="checkbox" v-model="trails"
+          type="checkbox" v-model="trailsEnabled"
         />
       </div>
       <InputSlider
@@ -446,13 +457,20 @@ function animate() {
 </template>
 
 <style>
+.canvas{
+  z-index: 1;
+  position:absolute;
+  left:10px;
+  top:10px;
+}
+
 .controls {
   display: flex;
   flex-direction: column;
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 1;
+  z-index: 100;
   background-color: rgba(255, 255, 255, 0.7);
   padding: 10px;
   width: 14%;
