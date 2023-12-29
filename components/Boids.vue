@@ -350,112 +350,68 @@ function animate() {
   <div>
     <canvas id="boidsCanvas"></canvas>
     <div class="controls">
-      <div>
-        <div>
-          Boids: {{ numberOfBoids }}
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="5000"
-          v-model="numberOfBoids"
-          step="1"
-          @input="updateNumberOfBoids"
-        />
-      </div>
-      <div>
-        <div>
-          Velocity: {{ globalVelocity }}
-        </div>
-        <input
-          type="range"
-          min="0.1"
-          max="20"
-          v-model="globalVelocity"
-        />
-      </div>
-      <div>
-        <div>
-          Separation: {{ globalSeparation }}
-        </div>
-        <input
-          type="range"
-          min="0.1"
-          max="100"
-          v-model="globalSeparation"
-        />
-      </div>
-      <div>
-        <div>
-          Cohesion Distance: {{ globalCohesionDistance }}
-        </div>
-        <input
-          type="range"
-          min="0.1"
-          max="100"
-          v-model="globalCohesionDistance"
-        />
-      </div>
-      <div>
-        <div>
-          Cohesion Factor: {{ globalCohesionFactor }}
-        </div>
-        <input
-          type="range"
-          min="0.0"
-          max="1.0"
-          step="0.1"
-          v-model="globalCohesionFactor"
-        />
-      </div>
-      <div>
-        <div>
-          Alignment Distance: {{ globalAlignmentDistance }}
-        </div>
-        <input
-          type="range"
-          min="0.1"
-          max="100"
-          v-model="globalAlignmentDistance"
-        />
-      </div>
-      <div>
-        <div>
-          Alignment Factor: {{ globalAlignmentFactor }}
-        </div>
-        <input
-          type="range"
-          min="0.0"
-          max="1.0"
-          step="0.1"
-          v-model="globalAlignmentFactor"
-        />
-      </div>
-      <div>
-        <div>
-          Grid Partition Count: {{ globalGridPartitions }}
-        </div>
-        <input
-          type="range"
-          min="2"
-          step="1"
-          max="50"
-          v-model="globalGridPartitions"
-          @input="updateGrid"
-        />
-      </div>
-      <div>
-        <div>
-          Jitter Amount: {{ jitterAmount }}
-        </div>
-        <input
-          type="range"
-          min="0"
-          step="10"
-          max="100"
-          v-model="jitterAmount"
-        />
-      </div>
+      <InputSlider
+        label="Boids"
+        v-model="numberOfBoids"
+        :min="0"
+        :max="5000"
+        :step="1"
+        @update:modelValue="updateNumberOfBoids"
+      />
+      <InputSlider
+        label="Velocity"
+        v-model="globalVelocity"
+        :min="0.1"
+        :max="20"
+        :step="0.1"
+      />
+      <InputSlider
+        label="Separation"
+        v-model="globalSeparation"
+        :min="0.1"
+        :max="100"
+      />
+      <InputSlider
+        label="Cohesion Distance"
+        v-model="globalCohesionDistance"
+        :min="0.1"
+        :max="100"
+      />
+      <InputSlider
+        label="Cohesion Factor"
+        v-model="globalCohesionFactor"
+        :min="0.0"
+        :max="1.0"
+        :step="0.1"
+      />
+      <InputSlider
+        label="Alignment Distance"
+        v-model="globalAlignmentDistance"
+        :min="0.1"
+        :max="100"
+        :step="0.1"
+      />
+      <InputSlider
+        label="Alignment Factor"
+        v-model="globalAlignmentFactor"
+        :min="0.0"
+        :max="1.0"
+        :step="0.1"
+      />
+      <InputSlider
+        label="Grid Partition Count"
+        v-model="globalGridPartitions"
+        :min="2"
+        :max="50"
+        :step="1"
+      />
+      <InputSlider
+        label="Jitter Amount"
+        v-model="jitterAmount"
+        :min="0"
+        :max="100"
+        :step="10"
+      />
       <div>
         <div>
           Trails Enabled
@@ -464,42 +420,27 @@ function animate() {
           type="checkbox" v-model="trails"
         />
       </div>
-      <div>
-        <div>
-          Boid Size: {{ boidSize }}
-        </div>
-        <input
-          type="range"
-          min="1.0"
-          max="100"
-          step="1"
-          v-model="boidSize"
-        />
-      </div>
-      <div>
-        <div>
-          Mouse Attraction Factor: {{ mouseAttractionFactor }}
-        </div>
-        <input
-          type="range"
-          min="0.0"
-          max="1.0"
-          step="0.1"
-          v-model="mouseAttractionFactor"
-        />
-      </div>
-      <div>
-        <div>
-          Colour Change Freq: {{ colourChangeFrequency }}
-        </div>
-        <input
-          type="range"
-          min="0.0"
-          max="1.0"
-          step="0.01"
-          v-model="colourChangeFrequency"
-        />
-      </div>
+      <InputSlider
+        label="Boid Size"
+        v-model="boidSize"
+        :min="1.0"
+        :max="100"
+        :step="1"
+      />
+      <InputSlider
+        label="Mouse Attraction Factor"
+        v-model="mouseAttractionFactor"
+        :min="0.0"
+        :max="1.0"
+        :step="0.1"
+      />
+      <InputSlider
+        label="Colour Change Freq"
+        v-model="colourChangeFrequency"
+        :min="0.0"
+        :max="1.0"
+        :step="0.01"
+      />
     </div>
   </div>
 </template>
@@ -512,15 +453,15 @@ function animate() {
   top: 10px;
   left: 10px;
   z-index: 1;
-  background-color: rgba(255, 255, 255, 0.644);
+  background-color: rgba(255, 255, 255, 0.7);
   padding: 10px;
-  width: 10%;
+  width: 14%;
   min-width: 80px;
 }
 
 .controls div {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 </style>
