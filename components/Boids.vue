@@ -2,7 +2,7 @@
 
 import pallete from '../pallet'
 
-const numberOfBoids = ref(2000);
+const numberOfBoids = ref(1000);
 const globalGridPartitions = ref(10);
 const globalVelocity = ref(5.0);
 const globalSeparation = ref(100.0);
@@ -15,7 +15,7 @@ const boidSize = ref(30);
 const jitterAmount = ref(20);
 const mouseAttractionFactor = ref(0.1);
 
-type Boid = { x: number, y: number, dx: number, dy: number, c: string };
+type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: string };
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -59,11 +59,16 @@ function handleMouseMove(event: MouseEvent) {
 }
 
 function getRandomColor() {
-  let randomIndex = 0
-  while (randomIndex === 0) {
-    randomIndex = Math.floor(Math.random() * pallete.length);
+  let index = 0
+  const type = Math.random() > 0.7 ? 1 : 0
+  if (type == 0) {
+    index = Math.floor(Math.random() * pallete.bg.length)
+    return { c: pallete.bg[index], t: 'bg'};
   }
-  return `#${pallete[randomIndex]}`;
+  else {
+    index = Math.floor(Math.random() * pallete.stars.length)
+    return { c: pallete.stars[index], t: 'stars'};
+  }
 }
 
 function addBoid() {
@@ -71,8 +76,8 @@ function addBoid() {
   const y = Math.random() * canvas.height;
   const dx = Math.random() * 2 - 1;
   const dy = Math.random() * 2 - 1;
-  const c = getRandomColor();
-  boids.push({ x, y, dx, dy, c });
+  const { c, t } = getRandomColor();
+  boids.push({ x, y, dx, dy, c, t });
 }
 
 function clearGrid() {
@@ -177,12 +182,23 @@ function updateBoid(boid: Boid) {
   applyAlignment(boid);
   applyCohesion(boid);
   applyJitter(boid);
+  applySpin(boid);
 }
 
 function applyJitter(boid: Boid) {
-  if (Math.random() > 0.5)
+  if (boid.t === 'stars' || Math.random() > 0.5)
     return
   let angleChange = (jitterAmount.value / 100) * (Math.random() * 2 - 1);
+  const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
+  const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
+  boid.dx = speed * Math.cos(newAngle);
+  boid.dy = speed * Math.sin(newAngle);
+}
+
+function applySpin(boid: Boid) {
+  if (boid.t === 'bg')
+    return
+  let angleChange = (jitterAmount.value / 200) * Math.abs(Math.random() * 2 - 1);
   const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
   const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
   boid.dx = speed * Math.cos(newAngle);
