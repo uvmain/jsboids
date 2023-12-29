@@ -3,7 +3,7 @@
 import pallete from '../pallet'
 
 const numberOfBoids = ref(2000);
-const globalVelocity = ref(3.0);
+const globalVelocity = ref(2.5);
 const globalSeparation = ref(100.0);
 const globalCohesionDistance = ref(30.0);
 const globalCohesionFactor = ref(0.7);
@@ -13,6 +13,7 @@ const globalGridPartitions = ref(10);
 const jitterAmount = ref(20);
 const spinAmount = ref(20);
 const trailsEnabled = ref(true);
+const starsSpinOnBounce = ref(200);
 const boidSize = ref(8);
 const mouseAttractionFactor = ref(0.1);
 const colourChangeFrequency = ref(0.00);
@@ -22,7 +23,7 @@ enum BoidType {
   STARS,
 };
 
-type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: BoidType };
+type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: BoidType, bounce: number };
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -87,7 +88,8 @@ function addBoid() {
   const dy = Math.random() * 2 - 1;
   const t = getRandomType()
   const c = getRandomColor(t);
-  const newBoid = { x, y, dx, dy, c, t }
+  const bounce = 0
+  const newBoid = { x, y, dx, dy, c, t, bounce}
   boids.push(newBoid);
 }
 
@@ -179,34 +181,60 @@ function updateBoid(boid: Boid) {
   boid.x += boid.dx * globalVelocity.value;
   boid.y += boid.dy * globalVelocity.value;
   normaliseVelocity(boid)
+  boid.bounce = boid.bounce > 0 ? boid.bounce - 1 : 0
 
   // Bounce off walls
   if (boid.x < 0 || boid.x > canvas.width) {
     boid.dx = -boid.dx;
+    boid.bounce = starsSpinOnBounce.value
   }
   if (boid.y < 0 || boid.y > canvas.height) {
     boid.dy = -boid.dy;
+    boid.bounce = starsSpinOnBounce.value
   }
 
   // Apply boid rules
   applySeparation(boid);
   applyAlignment(boid);
   applyCohesion(boid);
-  applyJitter(boid);
-  applySpin(boid);
+  if (boid.bounce > 0 && boid.t === BoidType.STARS)
+    applyCentering(boid);
+  if (boid.bounce > 0 || boid.t === BoidType.BG)
+    applyJitter(boid);
+  if (boid.bounce <= 0)
+    applySpin(boid);
 
   if (colourChangeFrequency.value > 0 && Math.random() < colourChangeFrequency.value)
     boid.c = getRandomColor(boid.t);
 }
 
 function applyJitter(boid: Boid) {
-  if (boid.t === BoidType.STARS || Math.random() > 0.5)
+  if (Math.random() > 0.5)
     return
   let angleChange = (jitterAmount.value / 100) * (Math.random() * 2 - 1);
   const newAngle = Math.atan2(boid.dy, boid.dx) + angleChange;
   const speed = Math.sqrt(boid.dx ** 2 + boid.dy ** 2);
   boid.dx = speed * Math.cos(newAngle);
   boid.dy = speed * Math.sin(newAngle);
+}
+
+function applyCentering(boid: Boid) {
+  // Calculate the center of the canvas
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // Calculate the direction vector towards the center
+  const directionX = centerX - boid.x;
+  const directionY = centerY - boid.y;
+
+  // Normalize the direction vector
+  const distance = Math.sqrt(directionX ** 2 + directionY ** 2);
+  const normalizedDirectionX = directionX / distance;
+  const normalizedDirectionY = directionY / distance;
+
+  // Update the boid's velocity to move towards the center
+  boid.dx = normalizedDirectionX;
+  boid.dy = normalizedDirectionY;
 }
 
 function applySpin(boid: Boid) {
@@ -431,6 +459,13 @@ function animate() {
           type="checkbox" v-model="trailsEnabled"
         />
       </div>
+      <InputSlider
+        label="Spin Delay After Bounce"
+        v-model="starsSpinOnBounce"
+        :min="10"
+        :max="600"
+        :step="10"
+      />
       <InputSlider
         label="Boid Size"
         v-model="boidSize"
