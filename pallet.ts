@@ -17,6 +17,7 @@ const pallete = {
   '#efe198',
   '#f4b305',
   '#c6ca74',
+  '#D2CFC6'
   ]
 };
 

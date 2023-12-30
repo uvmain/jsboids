@@ -13,17 +13,19 @@ const globalGridPartitions = ref(10);
 const jitterAmount = ref(20);
 const spinAmount = ref(20);
 const trailsEnabled = ref(true);
-const starsSpinOnBounce = ref(200);
+const starsSpinOnBounce = ref(50);
 const boidSize = ref(8);
 const mouseAttractionFactor = ref(0.1);
 const colourChangeFrequency = ref(0.00);
+const brushLength = ref(50);
+const brushGap = ref(10);
 
 enum BoidType {
   BG,
   STARS,
 };
 
-type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: BoidType, bounce: number };
+type Boid = { x: number, y: number, dx: number, dy: number, c: string, t: BoidType, bounce: number, bl: number };
 
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
@@ -88,8 +90,9 @@ function addBoid() {
   const dy = Math.random() * 2 - 1;
   const t = getRandomType()
   const c = getRandomColor(t);
-  const bounce = 0
-  const newBoid = { x, y, dx, dy, c, t, bounce}
+  const bounce = 0;
+  const bl = Math.floor(Math.random() * brushLength.value);
+  const newBoid = { x, y, dx, dy, c, t, bounce, bl}
   boids.push(newBoid);
 }
 
@@ -337,6 +340,15 @@ function normaliseVelocity(boid: Boid) {
 }
 
 function drawBoid(boid: Boid) {
+  if (boid.bl < 0) {
+    boid.bl += 1;
+    return
+  }
+  if (boid.bl >= brushLength.value) {
+    boid.bl = -brushGap.value;
+    return
+  }
+  boid.bl += 1;
   const size = boidSize.value;
 
   // Calculate the angle of the boid's velocity
@@ -486,6 +498,20 @@ function animate() {
         :min="0.0"
         :max="1.0"
         :step="0.01"
+      />
+      <InputSlider
+        label="Brush Length"
+        v-model="brushLength"
+        :min="1"
+        :max="100"
+        :step="1"
+      />
+      <InputSlider
+        label="Brush Gap"
+        v-model="brushGap"
+        :min="1"
+        :max="30"
+        :step="1"
       />
     </div>
   </div>
